@@ -35,6 +35,7 @@
 
 static const char* hsm_str = "hsm";
 
+pthread_mutex_t lock_ctx = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Open HSM.
@@ -93,6 +94,7 @@ lhsm_clear_key_cache(key_type* key)
 void
 lhsm_check_connection(engine_type* engine)
 {
+    pthread_mutex_lock(&lock_ctx);
     if (hsm_check_context(NULL) != HSM_OK) {
         ods_log_warning("[%s] idle libhsm connection, trying to reopen",
             hsm_str);
@@ -103,6 +105,7 @@ lhsm_check_connection(engine_type* engine)
     } else {
         ods_log_debug("[%s] libhsm connection ok", hsm_str);
     }
+    pthread_mutex_unlock(&lock_ctx);
 }
 
 

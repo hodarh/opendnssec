@@ -45,6 +45,8 @@
 
 static const char* zone_str = "zone";
 
+extern pthread_mutex_t lock_ctx;
+
 
 /**
  * Create a new zone.
@@ -232,12 +234,15 @@ zone_publish_dnskeys(zone_type* zone)
     ods_log_assert(zone->name);
 
     /* hsm access */
+    pthread_mutex_lock(&lock_ctx);
     ctx = hsm_create_context();
     if (ctx == NULL) {
         ods_log_error("[%s] unable to publish keys for zone %s: "
             "error creating libhsm context", zone_str, zone->name);
+        pthread_mutex_unlock(&lock_ctx);
         return ODS_STATUS_HSM_ERR;
     }
+    pthread_mutex_unlock(&lock_ctx);
     ttl = zone->default_ttl;
     /* dnskey ttl */
     if (zone->signconf->dnskey_ttl) {
@@ -257,8 +262,10 @@ zone_publish_dnskeys(zone_type* zone)
                     return status;
                 }
             } else {
+                pthread_mutex_lock(&lock_ctx);
                 status = lhsm_get_key(ctx, zone->apex,
                         &zone->signconf->keys->keys[i]);
+                pthread_mutex_unlock(&lock_ctx);
                 if (status != ODS_STATUS_OK) {
                     ods_log_error("[%s] unable to publish dnskeys for zone %s: "
                             "error creating dnskey", zone_str, zone->name);
@@ -432,18 +439,23 @@ zone_prepare_keys(zone_type* zone)
     }
     ods_log_assert(zone->name);
     /* hsm access */
+    pthread_mutex_lock(&lock_ctx);
     ctx = hsm_create_context();
     if (ctx == NULL) {
         ods_log_error("[%s] unable to prepare signing keys for zone %s: "
             "error creating libhsm context", zone_str, zone->name);
+        pthread_mutex_unlock(&lock_ctx);
         return ODS_STATUS_HSM_ERR;
     }
+    pthread_mutex_unlock(&lock_ctx);
     /* prepare keys */
     for (i=0; i < zone->signconf->keys->count; i++) {
         if(zone->signconf->dnskey_signature != NULL && zone->signconf->keys->keys[i].ksk)
             continue;
         /* get dnskey */
+        pthread_mutex_lock(&lock_ctx);
         status = lhsm_get_key(ctx, zone->apex, &zone->signconf->keys->keys[i]);
+        pthread_mutex_unlock(&lock_ctx);
         if (status != ODS_STATUS_OK) {
             ods_log_error("[%s] unable to prepare signing keys for zone %s: "
                 "error getting dnskey", zone_str, zone->name);
