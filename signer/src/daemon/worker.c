@@ -36,8 +36,6 @@
 #include "signer/tools.h"
 #include "signer/zone.h"
 
-extern pthread_mutex_t lock_ctx;
-
 ods_lookup_table worker_str[] = {
     { WORKER_WORKER, "worker" },
     { WORKER_DRUDGER, "drudger" },
@@ -649,9 +647,8 @@ worker_drudge(worker_type* worker)
     ods_log_assert(worker->type == WORKER_DRUDGER);
 
     engine = worker->engine;
-    pthread_mutex_lock(&lock_ctx);
+    ods_log_debug("[%s[%i]] create hsm context", worker2str(worker->type), worker->thread_num);
     ctx = hsm_create_context();
-    pthread_mutex_unlock(&lock_ctx);
     while (worker->need_to_exit == 0) {
         ods_log_deeebug("[%s[%i]] report for duty", worker2str(worker->type),
             worker->thread_num);
@@ -679,14 +676,7 @@ worker_drudge(worker_type* worker)
         /* do some work */
         if (rrset) {
             ods_log_assert(superior);
-            pthread_mutex_lock(&lock_ctx);
-            if (!ctx) 
-                ctxflag = 0;
-            else
-                ctxflag = 1;
-            pthread_mutex_unlock(&lock_ctx);
-
-            if (!ctxflag) { 
+            if (!ctx) { 
                 ods_log_crit("[%s[%i]] error creating libhsm context",
                     worker2str(worker->type), worker->thread_num);
                 engine->need_to_reload = 1;
@@ -703,9 +693,7 @@ worker_drudge(worker_type* worker)
                 ods_log_assert(zone->apex);
                 ods_log_assert(zone->signconf);
                 worker->clock_in = time_now();
-                pthread_mutex_lock(&lock_ctx);
                 status = rrset_sign(ctx, rrset, superior->clock_in);
-                pthread_mutex_unlock(&lock_ctx);
                 lock_basic_lock(&superior->worker_lock);
                 if (status == ODS_STATUS_OK) {
                     superior->jobs_completed++;
