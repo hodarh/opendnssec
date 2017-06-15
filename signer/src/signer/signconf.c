@@ -163,10 +163,15 @@ signconf_update(signconf_type** signconf, const char* scfile,
     }
     /* is the file updated? */
     st_mtime = ods_file_lastmodified(scfile);
-    if (st_mtime <= last_modified) {
+    if (st_mtime < last_modified) {
         return ODS_STATUS_UNCHANGED;
     }
-    /* if so, read the new signer configuration */
+    /**
+     * OPENDNSSEC-686: If the changes happen within one second lastmodifiled time
+     * won't be changed so it doesn't guarantee the file hasn't been touched.
+     * Read the new signer configuration even if the time is the same
+     */
+
     new_sc = signconf_create();
     if (!new_sc) {
         ods_log_error("[%s] unable to update signconf: signconf_create() "

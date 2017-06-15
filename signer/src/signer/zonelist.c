@@ -339,18 +339,20 @@ zonelist_update(zonelist_type* zl, const char* zlfile)
     if (!zl|| !zl->zones || !zlfile) {
         return ODS_STATUS_ASSERT_ERR;
     }
-    /* is the file updated? */
-    /* OPENDNSSEC-686: changes happening within one second will not be
-     * seen
+    /* is the file updated?
+     * OPENDNSSEC-686: changes happening within one second will not be seen
+     * Read the new zonelist even if the time is the same
      */
+
     st_mtime = ods_file_lastmodified(zlfile);
-    if (st_mtime <= zl->last_modified) {
+    if (st_mtime < zl->last_modified) {
         (void)time_datestamp(zl->last_modified, "%Y-%m-%d %T", &datestamp);
         ods_log_debug("[%s] zonelist file %s is unchanged since %s",
             zl_str, zlfile, datestamp?datestamp:"Unknown");
         free((void*)datestamp);
         return ODS_STATUS_UNCHANGED;
     }
+
     /* create new zonelist */
     new_zlist = zonelist_create();
     /* read zonelist */
@@ -362,7 +364,7 @@ zonelist_update(zonelist_type* zl, const char* zlfile)
         new_zlist->last_modified = st_mtime;
         zonelist_merge(zl, new_zlist);
         (void)time_datestamp(zl->last_modified, "%Y-%m-%d %T", &datestamp);
-        ods_log_debug("[%s] file %s is modified since %s", zl_str, zlfile,
+        ods_log_debug("[%s] file %s was modified at %s", zl_str, zlfile,
             datestamp?datestamp:"Unknown");
         free((void*)datestamp);
     } else {

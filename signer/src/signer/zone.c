@@ -144,6 +144,9 @@ zone_load_signconf(zone_type* zone, signconf_type** new_signconf)
             "insecure?", zone_str, zone->name);
         return ODS_STATUS_INSECURE;
     }
+    /* OPENDNSSEC-686: if the changes happen in a second, the signconf_update may
+     * not notice the changes
+     */
     status = signconf_update(&signconf, zone->signconf_filename,
         zone->signconf->last_modified);
     if (status == ODS_STATUS_OK) {
@@ -155,7 +158,7 @@ zone_load_signconf(zone_type* zone, signconf_type** new_signconf)
         }
         (void)time_datestamp(signconf->last_modified, "%Y-%m-%d %T",
             &datestamp);
-        ods_log_debug("[%s] zone %s signconf file %s is modified since %s",
+        ods_log_debug("[%s] zone %s signconf file %s was modified at %s",
             zone_str, zone->name, zone->signconf_filename,
             datestamp?datestamp:"Unknown");
         free((void*)datestamp);
