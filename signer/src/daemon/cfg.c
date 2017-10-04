@@ -91,6 +91,7 @@ engine_config(const char* cfgfile, int cmdline_verbosity)
         	ecfg->verbosity = parse_conf_verbosity(cfgfile);
         }
         ecfg->interfaces = parse_conf_listener(cfgfile);
+        ecfg->http_interfaces = parse_conf_http_listener(cfgfile);
         ecfg->repositories = parse_conf_repositories(cfgfile);
         /* done */
         ods_fclose(cfgfd);
@@ -212,6 +213,26 @@ engine_config_print(FILE* out, engineconfig_type* config)
              fprintf(out, "\t\t</Listener>\n");
 
         }
+        if (config->http_interfaces) {
+             size_t i = 0;
+             fprintf(out, "\t\t<http-Listener>\n");
+
+             for (i=0; i < config->http_interfaces->count; i++) {
+                 fprintf(out, "\t\t\t<http-Interface>");
+                 if (config->http_interfaces->interfaces[i].address) {
+                     fprintf(out, "<Address>%s</Address>",
+                         config->http_interfaces->interfaces[i].address);
+                 }
+                 if (config->http_interfaces->interfaces[i].port) {
+                     fprintf(out, "<Port>%s</Port>",
+                         config->http_interfaces->interfaces[i].port);
+                 }
+                 fprintf(out, "<http-Interface>\n");
+             }
+             fprintf(out, "\t\t</http-Listener>\n");
+
+        }
+
 
         fprintf(out, "\t\t<WorkingDirectory>%s</WorkingDirectory>\n",
             config->working_dir);
@@ -246,6 +267,7 @@ engine_config_cleanup(engineconfig_type* config)
         return;
     }
     listener_cleanup(config->interfaces);
+    http_listener_cleanup(config->http_interfaces);
     hsm_repository_free(config->repositories);
     free((void*)config->notify_command);
     free((void*)config->cfg_filename);

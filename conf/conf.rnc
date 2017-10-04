@@ -140,6 +140,12 @@ start = element Configuration {
 			interface*
 		}? &
 
+		# http Listener
+		# DEFAULT PORT: 15355
+		element http-Listener {
+			http-interface*
+		}? &
+
 		# System command to call after a zone has been (re)signed
 		#
 		# '%zone' in the string will be replaced by the zone name
@@ -186,5 +192,9 @@ sqlite = element SQLite { xsd:string }
 
 interface = element Interface {	address? & port? }
 
+http-interface = element http-Interface { address? & port? & username? & password? }
+
 address = element Address { xsd:string } # e.g., 192.0.2.1 or 2001:DB8::1
 port    = element Port { xsd:positiveInteger { maxInclusive = "65535" } }
+username = element Username { xsd:string }
+password = element Password { xsd:string}

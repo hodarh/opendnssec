@@ -51,6 +51,21 @@ listener_create()
     return listener;
 }
 
+/**
+ * Create http listener.
+ *
+ */
+http_listener_type*
+http_listener_create()
+{
+    http_listener_type* listener = NULL;
+    CHECKALLOC(listener = (http_listener_type*) malloc(sizeof(http_listener_type)));
+    listener->count = 0;
+    listener->interfaces = NULL;
+    return listener;
+}
+
+
 
 /**
  * Push an interface to the listener.
@@ -104,6 +119,61 @@ listener_push(listener_type* listener, char* address, int family, const char* po
 
 
 /**
+ * Push an http interface to the http listener.
+ *
+ */
+http_interface_type*
+http_listener_push(http_listener_type* listener, char* address, int family, const char* port, char* user, char* pass)
+{
+    interface_type* ifs_old = NULL;
+    ods_log_assert(listener);
+    ods_log_assert(address);
+    ifs_old = listener->interfaces;
+    CHECKALLOC(listener->interfaces = (http_interface_type*) malloc((listener->count + 1) * sizeof(http_interface_type)));
+    if (ifs_old) {
+        memcpy(listener->interfaces, ifs_old,
+           (listener->count) * sizeof(http_interface_type));
+    }
+    free(ifs_old);
+    listener->count++;
+    listener->interfaces[listener->count -1].address = strdup(address);
+    listener->interfaces[listener->count -1].family = family;
+    listener->interfaces[listener->count -1].user = strdup(user);
+    listener->interfaces[listener->count -1].address = strdup(pass);
+
+    if (port) {
+        listener->interfaces[listener->count -1].port = strdup(port);
+    } else{
+        listener->interfaces[listener->count -1].port = NULL;
+    }
+    memset(&listener->interfaces[listener->count -1].addr, 0,
+        sizeof(union acl_addr_storage));
+    if (listener->interfaces[listener->count -1].family == AF_INET6 &&
+        strlen(listener->interfaces[listener->count -1].address) > 0) {
+        if (inet_pton(listener->interfaces[listener->count -1].family,
+            listener->interfaces[listener->count -1].address,
+            &listener->interfaces[listener->count -1].addr.addr6) != 1) {
+            ods_log_error("[%s] bad ip address '%s'", listener_str,
+                listener->interfaces[listener->count -1].address);
+            return NULL;
+        }
+    } else if (listener->interfaces[listener->count -1].family == AF_INET &&
+        strlen(listener->interfaces[listener->count -1].address) > 0) {
+        if (inet_pton(listener->interfaces[listener->count -1].family,
+            listener->interfaces[listener->count -1].address,
+            &listener->interfaces[listener->count -1].addr.addr) != 1) {
+            ods_log_error("[%s] bad ip address '%s'", listener_str,
+                listener->interfaces[listener->count -1].address);
+            return NULL;
+        }
+    }
+    return &listener->interfaces[listener->count -1];
+}
+
+
+
+
+/**
  * Clean up interface.
  *
  */
@@ -116,6 +186,25 @@ interface_cleanup(interface_type* i)
     free((void*)i->port);
     free((void*)i->address);
 }
+
+
+
+/**
+ * Clean up http interface.
+ *
+ */
+void
+http_interface_cleanup(http_interface_type* i)
+{
+    if (!i) {
+        return;
+    }
+    free((void*)i->port);
+    free((void*)i->address);
+    free((void*)i->user);
+    free((void*)i->pass);
+}
+
 
 
 /**
@@ -131,6 +220,25 @@ listener_cleanup(listener_type* listener)
     }
     for (i=0; i < listener->count; i++) {
         interface_cleanup(&listener->interfaces[i]);
+    }
+    free(listener->interfaces);
+    free(listener);
+}
+
+
+/**
+ * Clean up http listener.
+ *
+ */
+void
+http_listener_cleanup(http_listener_type* listener)
+{
+    uint16_t i = 0;
+    if (!listener) {
+        return;
+    }
+    for (i=0; i < listener->count; i++) {
+        http_interface_cleanup(&listener->interfaces[i]);
     }
     free(listener->interfaces);
     free(listener);

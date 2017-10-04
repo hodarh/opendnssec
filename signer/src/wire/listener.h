@@ -74,6 +74,21 @@ struct interface_struct {
 };
 
 /**
+ * http Interface.
+ *
+ */
+typedef struct http_interface_struct http_interface_type;
+struct http_interface_struct {
+    char* port;
+    char* address;
+    int family;
+    union acl_addr_storage addr;
+    char* user;
+    char* pass;
+};
+
+
+/**
  * Listener.
  *
  */
@@ -84,12 +99,25 @@ struct listener_struct {
 };
 
 /**
+ * http Listener.
+ *
+ */
+typedef struct http_listener_struct http_listener_type;
+struct http_listener_struct {
+    http_interface_type* interfaces;
+    size_t count;
+};
+
+
+/**
  * Create listener.
  * \param[in] allocator memory allocator
  * \return listener_type* listener
  *
  */
 listener_type* listener_create(void);
+
+http_listener_type* http_listener_create(void);
 
 /**
  * Push an interface to the listener.
@@ -103,6 +131,10 @@ listener_type* listener_create(void);
 interface_type* listener_push(listener_type* list, char* address, int family,
     const char* port);
 
+
+http_interface_type* http_listener_push(http_listener_type* list, char* address,
+    int family, const char* port, char* user, char* pass);
+
 /**
  * Clean up interface.
  * \param[in] i interface
@@ -110,11 +142,15 @@ interface_type* listener_push(listener_type* list, char* address, int family,
  */
 void interface_cleanup(interface_type* i);
 
+void http_interface_cleanup(http_interface_type* i);
+
 /**
  * Clean up listener.
  * \param[in] listener listener to clean up
  *
  */
 void listener_cleanup(listener_type* listener);
+
+void http_listener_cleanup(http_listener_type* listener);
 
 #endif /* WIRE_LISTENER_H */

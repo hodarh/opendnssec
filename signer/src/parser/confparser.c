@@ -294,7 +294,7 @@ parse_conf_listener(const char* cfgfile)
     ods_log_assert(listener);
 
     /* If port is not set in Listener in the conf file, default value is used.
-     * default port: 15354
+     * default port for listener: 15354
      */
     if (xpathObj->nodesetval && xpathObj->nodesetval->nodeNr > 0) {
         for (i = 0; i < xpathObj->nodesetval->nodeNr; i++) {
@@ -345,6 +345,125 @@ parse_conf_listener(const char* cfgfile)
     }
     return listener;
 }
+
+
+
+/**
+ * Parse the http listener interfaces.
+ *
+ */
+http_listener_type*
+parse_conf_http_listener(const char* cfgfile)
+{
+    http_listener_type* listener = NULL;
+    http_interface_type* interface = NULL;
+    int i = 0;
+    char* address = NULL;
+    const char* port = NULL;
+    char* user = NULL;
+    char* pass = NULL;
+    xmlDocPtr doc = NULL;
+    xmlXPathContextPtr xpathCtx = NULL;
+    xmlXPathObjectPtr xpathObj = NULL;
+    xmlNode* curNode = NULL;
+    xmlChar* xexpr = NULL;
+
+    ods_log_assert(cfgfile);
+
+    /* Load XML document */
+    doc = xmlParseFile(cfgfile);
+    if (doc == NULL) {
+        ods_log_error("[%s] could not parse <http-Listener>: "
+            "xmlParseFile() failed", parser_str);
+        return NULL;
+    }
+    /* Create xpath evaluation context */
+    xpathCtx = xmlXPathNewContext(doc);
+    if(xpathCtx == NULL) {
+        xmlFreeDoc(doc);
+        ods_log_error("[%s] could not parse <http-Listener>: "
+            "xmlXPathNewContext() failed", parser_str);
+        return NULL;
+    }
+    /* Evaluate xpath expression */
+    xexpr = (xmlChar*) "//Configuration/Signer/http-Listener/http-Interface";
+    xpathObj = xmlXPathEvalExpression(xexpr, xpathCtx);
+    if(xpathObj == NULL) {
+        xmlXPathFreeContext(xpathCtx);
+        xmlFreeDoc(doc);
+        ods_log_error("[%s] could not parse <http-Listener>: "
+            "xmlXPathEvalExpression failed", parser_str);
+        return NULL;
+    }
+    /* Parse interfaces */
+    listener = http_listener_create();
+    ods_log_assert(listener);
+
+    /* If port is not set in Listener in the conf file, default value is used.
+     * default port for listener: 15354
+     * default port for http listener: 15355
+     */
+    if (xpathObj->nodesetval && xpathObj->nodesetval->nodeNr > 0) {
+        for (i = 0; i < xpathObj->nodesetval->nodeNr; i++) {
+            address = NULL;
+            port = strdup("15355");
+            user = NULL;
+            pass = NULL;
+
+            curNode = xpathObj->nodesetval->nodeTab[i]->xmlChildrenNode;
+            while (curNode) {
+                if (xmlStrEqual(curNode->name, (const xmlChar *)"Address")) {
+                    address = (char *) xmlNodeGetContent(curNode);
+                } else if (xmlStrEqual(curNode->name, (const xmlChar *)"Port")) {
+                    free((char *)port);
+                    port = (char *) xmlNodeGetContent(curNode);
+                } else if (xmlStrEqual(curNode->name, (const xmlChar *)"Username")) {
+                    user = (char *) xmlNodeGetContent(curNode);
+                } else if (xmlStrEqual(curNode->name, (const xmlChar *)"Password")) {
+                    pass = (char *) xmlNodeGetContent(curNode);
+                }
+
+
+                curNode = curNode->next;
+            }
+            if (address) {
+                interface = http_listener_push(listener, address,
+                    acl_parse_family(address), port, user, pass);
+            } else {
+                interface = http_listener_push(listener, (char *)"", AF_INET, port, user, pass);
+                if (interface) {
+                    interface = http_listener_push(listener, (char *)"", AF_INET6, port, user, pass);
+                }
+            }
+            if (!interface) {
+               ods_log_error("[%s] unable to add %s:%s http interface: "
+                   "http_listener_push() failed", parser_str, address?address:"",
+                   port);
+            } else {
+               ods_log_debug("[%s] added %s:%s http_interface to http_listener",
+                   parser_str, address?address:"", port);
+            }
+            free((void*)port);
+            free((void*)address);
+            free((void*)user);
+            free((void*)pass);
+        }
+    }
+    else {
+        interface = http_listener_push(listener, (char *)"", AF_INET, "15355", user, pass);
+        if (interface) {
+            interface = http_listener_push(listener, (char *)"", AF_INET6, "15355", user, pass);
+        }
+    }
+    xmlXPathFreeObject(xpathObj);
+    xmlXPathFreeContext(xpathCtx);
+    if (doc) {
+        xmlFreeDoc(doc);
+    }
+    return listener;
+}
+
+
 
 
 /**

@@ -76,6 +76,8 @@ hsm_repository_t* parse_conf_repositories(const char* cfgfile);
  */
 listener_type* parse_conf_listener(const char* cfgfile);
 
+http_listener_type* parse_conf_http_listener(const char* cfgfile);
+
 /**
  * Parse elements from the configuration file.
  * \param[in] allocator the allocator
