@@ -244,6 +244,7 @@ parse_conf_repositories(const char* cfgfile)
             cur->pin = NULL;
             cur->require_backup = 0;
             cur->use_pubkey = 1;
+            cur->allow_extract = 0;
             cur->next = NULL;
 
             if (prev)
@@ -265,6 +266,8 @@ parse_conf_repositories(const char* cfgfile)
                     cur->pin = (char *) xmlNodeGetContent(curNode);
                 if (xmlStrEqual(curNode->name, (const xmlChar *)"SkipPublicKey"))
                     cur->use_pubkey = 0;
+                if (xmlStrEqual(curNode->name, (const xmlChar *)"AllowExtraction"))
+                    cur->allow_extract = 1;
 
                 curNode = curNode->next;
             }

@@ -47,6 +47,7 @@ struct engineconfig_repository {
     char* tokenlabel;
     uint8_t use_pubkey;
     int require_backup;
+    int allow_extract;
 };
 
 struct engineconfig_listener {

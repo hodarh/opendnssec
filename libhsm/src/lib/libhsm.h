@@ -80,6 +80,7 @@
 /*! HSM configuration */
 typedef struct {
     unsigned int use_pubkey;     /*!< Maintain public keys in HSM */
+    unsigned int allow_extract;  /*!< Generate CKA_EXTRACTABLE private keys */
 } hsm_config_t;
 
 /*! Data type to describe an HSM */
@@ -124,6 +125,7 @@ struct hsm_repository_struct {
     char    *pin;           /*!< PKCS#11 login credentials */
     uint8_t require_backup; /*!< require a backup of keys before using new keys */
     uint8_t use_pubkey;     /*!< use public keys in repository? */
+    unsigned int allow_extract;  /*!< Generate CKA_EXTRACTABLE private keys */
 };
 
 /*! HSM context to keep track of sessions */
@@ -192,7 +194,7 @@ hsm_open2(struct engineconfig_repository* rlist,
 */
 hsm_repository_t *
 hsm_repository_new(char* name, char* module, char* tokenlabel, char* pin,
-    uint8_t use_pubkey, uint8_t require_backup);
+    uint8_t use_pubkey, uint8_t allowextract, uint8_t require_backup);
 
 /*! Free configured repositories.
 
